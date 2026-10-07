@@ -1,0 +1,55 @@
+# Non-secret application configuration. Laravel reads these as plain env vars,
+# so no .env file ships in the image.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: words-config
+  namespace: words
+data:
+  APP_NAME: Slovnik
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_URL: https://api-words.litruk.dev
+  APP_LOCALE: en
+  APP_FALLBACK_LOCALE: en
+  APP_MAINTENANCE_DRIVER: file
+  BCRYPT_ROUNDS: "12"
+
+  # Logs go to stdout/stderr, i.e. `kubectl logs`.
+  LOG_CHANNEL: stderr
+  LOG_STACK: stderr
+  LOG_LEVEL: warning
+  LOG_DEPRECATIONS_CHANNEL: "null"
+
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_DATABASE: words
+  DB_USERNAME: words
+
+  # No Redis and no workers: nothing is queued, and the cache and the
+  # password reset page's sessions live in Postgres.
+  CACHE_STORE: database
+  SESSION_DRIVER: database
+  SESSION_LIFETIME: "120"
+  QUEUE_CONNECTION: sync
+
+  BROADCAST_CONNECTION: log
+  FILESYSTEM_DISK: local
+
+  GEMINI_MODEL: gemini-3.6-flash
+
+  LIGHTHOUSE_QUERY_CACHE_ENABLE: "true"
+  # Laravel 13 refuses to unserialize objects from a cache store, so parsed
+  # queries are kept as PHP files (this is also the default in config/).
+  LIGHTHOUSE_QUERY_CACHE_MODE: opcache
+  LIGHTHOUSE_DEBUG: "0"
+
+  # Password reset mails only go to `kubectl logs` until a real mailer is set
+  # up: put MAIL_MAILER=smtp here and MAIL_HOST / MAIL_USERNAME /
+  # MAIL_PASSWORD into the secret.
+  MAIL_MAILER: log
+  # The log mailer writes at debug level; this channel lets it past LOG_LEVEL.
+  MAIL_LOG_CHANNEL: mail
+  MAIL_FROM_ADDRESS: hello@example.com
+  MAIL_FROM_NAME: Slovnik

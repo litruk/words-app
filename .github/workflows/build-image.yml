@@ -1,0 +1,157 @@
+name: Build API images
+
+# Builds the two images the Kubernetes manifests run - `words-api` (php-fpm
+# with the application baked in) and `words-web` (nginx with public/) - pushes
+# them to GHCR and rolls the cluster onto them.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      # Docs never change the image, and a docs-only push should not roll the
+      # cluster.
+      - '!backend/**.md'
+      - '.github/workflows/build-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: testing
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sail -d testing"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, intl, bcmath
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run the tests
+        env:
+          APP_KEY: base64:2fl+Ktvkfl+Fuz4Qp/A75G2RTiWVA/ZoKZvp6fiiM10=
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USERNAME: sail
+          DB_PASSWORD: password
+        run: php artisan test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        include:
+          - target: app
+            image: words-api
+          - target: web
+            image: words-web
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.image }}
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          target: ${{ matrix.target }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+      - name: Summary
+        run: |
+          echo "### ${{ matrix.image }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # Pushing images restarts nothing by itself: a pod only pulls when it is
+  # (re)created. This job rolls the cluster onto the exact commit that was built,
+  # migrating first so the new code never meets an old schema.
+  deploy:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Migrate and roll out
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          SHA: ${{ github.sha }}
+          OWNER: ${{ github.repository_owner }}
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ vars.SSH_HOST }}
+          username: ${{ vars.SSH_USER }}
+          envs: SHA,OWNER
+          script: |
+            set -e
+            export KUBECONFIG="$HOME/.kube/config"
+            API="ghcr.io/$OWNER/words-api:$SHA"
+            WEB="ghcr.io/$OWNER/words-web:$SHA"
+
+            cd /home/deploy/projects/words-app
+            git fetch --prune origin
+            git reset --hard "$SHA"
+            cd backend
+
+            # Config changes (ConfigMap, Service) ship with the same commit.
+            kubectl apply -k k8s/
+
+            kubectl -n words delete job -l job=migrate --ignore-not-found
+            sed "s|words-api:latest|words-api:$SHA|" k8s/50-migrate-job.yaml | kubectl -n words create -f -
+            kubectl -n words wait --for=condition=complete job -l job=migrate --timeout=300s
+            kubectl -n words logs -l job=migrate --tail=15
+
+            kubectl -n words set image deploy/app php-fpm="$API" nginx="$WEB"
+            kubectl -n words rollout status deploy/app --timeout=300s

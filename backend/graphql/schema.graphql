@@ -1,0 +1,373 @@
+"An ISO 8601 date-time with its UTC offset, e.g. `2026-10-07T20:30:00+03:00`."
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTimeTz")
+
+"A date string with format `Y-m-d`, e.g. `2026-10-07`."
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
+
+type Query {
+    "The currently authenticated user."
+    me: User @guard(with: ["sanctum"]) @auth
+
+    """
+    What waits today in one language: due reviews and today's new cards,
+    plus the next day with reviews for when nothing is left.
+    """
+    dashboard(language: String!): Dashboard!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\Dashboard")
+
+    "Word counts for each language the user learns."
+    languageStats: [LanguageStats!]!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\LanguageStats")
+
+    "The user's dictionary in one language."
+    words(
+        language: String!
+        filter: WordFilter = ALL
+        "Matches the term or any of its translations."
+        search: String
+        sort: WordSort = RECENT
+    ): [Word!]!
+        @guard(with: ["sanctum"])
+        @paginate(builder: "App\\GraphQL\\Queries\\Words", defaultCount: 30, maxCount: 100)
+
+    "One entry of the user's dictionary."
+    word(id: ID!): Word
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\WordById")
+
+    """
+    Look a word or phrase up. `language` is the language being learnt; with
+    `reverse` the text is typed in the user's native language and the entry is
+    for its equivalent in `language`.
+    """
+    lookup(text: String! @rules(apply: ["required", "string", "max:160"]), language: String!, reverse: Boolean = false): LookupResult!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\LookupWord")
+
+    """
+    Cards for a study session: due reviews first, then today's new cards. With
+    `ids` the session is exactly those cards, in that order.
+    """
+    studyQueue(language: String!, ids: [ID!]): [Word!]!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\StudyQueue")
+
+    """
+    How much will be waiting at each of the given moments, across every
+    language the user learns - the app schedules its reminders from this.
+    """
+    reminderForecast(at: [DateTime!]!): [ReminderForecast!]!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Queries\\ReminderForecast")
+}
+
+type Mutation {
+    "Create an account and receive an API token."
+    register(
+        name: String! @rules(apply: ["required", "string", "max:255"])
+        email: String! @rules(apply: ["required", "email", "max:255", "unique:users,email"])
+        password: String! @rules(apply: ["required", "min:8"])
+        native_language: String @rules(apply: ["nullable", "App\\Rules\\SupportedLanguage"])
+    ): AuthPayload!
+        @field(resolver: "App\\GraphQL\\Mutations\\Register")
+
+    "Exchange credentials for an API token."
+    login(email: String!, password: String!): AuthPayload!
+        @field(resolver: "App\\GraphQL\\Mutations\\Login")
+
+    "Revoke the token used to make this request."
+    logout: Boolean!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\Logout")
+
+    """
+    Email a link to the password reset page, in the account's language.
+    Always returns true, regardless of whether the email is registered, so
+    the response can't be used to probe which emails have accounts.
+    """
+    forgotPassword(email: String! @rules(apply: ["required", "email"])): Boolean!
+        @field(resolver: "App\\GraphQL\\Mutations\\ForgotPassword")
+
+    "Update the current user's name and email."
+    updateProfile(
+        name: String! @rules(apply: ["required", "string", "max:255"])
+        email: String @rules(apply: ["nullable", "email", "max:255"])
+    ): User!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\UpdateProfile")
+
+    "Change the current user's password. Revokes all other active sessions."
+    changePassword(
+        currentPassword: String!
+        newPassword: String! @rules(apply: ["required", "min:8"])
+    ): Boolean!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\ChangePassword")
+
+    "Delete the account and everything in it. Asks for the password again."
+    deleteAccount(password: String!): Boolean!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\DeleteAccount")
+
+    """
+    Set the native language and the languages being learnt. Words of a
+    language that is dropped stay in the dictionary, hidden until it is picked
+    again.
+    """
+    updateLanguages(
+        native_language: String! @rules(apply: ["required", "App\\Rules\\SupportedLanguage"])
+        studied_languages: [String!]! @rulesForArray(apply: ["required", "min:1", "max:10"])
+    ): User!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\UpdateLanguages")
+
+    """
+    Add a word or phrase. With `lookup_id` its details (transcriptions, meaning,
+    examples, forms, synonyms) are taken from that dictionary answer.
+    """
+    addWord(
+        language: String!
+        term: String! @rules(apply: ["required", "string", "max:160"])
+        translations: [String!]! @rulesForArray(apply: ["max:10"]) @rules(apply: ["max:160"])
+        note: String @rules(apply: ["nullable", "string", "max:500"])
+        source: WordSource = TEXT
+        lookup_id: ID
+    ): Word!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\AddWord")
+
+    "Edit a word's spelling, translations or note."
+    updateWord(
+        id: ID!
+        term: String @rules(apply: ["nullable", "string", "max:160"])
+        translations: [String!] @rulesForArray(apply: ["max:10"]) @rules(apply: ["max:160"])
+        note: String @rules(apply: ["nullable", "string", "max:500"])
+    ): Word!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\UpdateWord")
+
+    deleteWord(id: ID!): Boolean!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\DeleteWord")
+
+    "Forget the learning progress: the word becomes new again."
+    resetWordProgress(id: ID!): Word!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\ResetWordProgress")
+
+    "Record an answer in a study session and schedule the card's next review."
+    reviewWord(id: ID!, rating: Rating!, duration_ms: Int): Word!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\ReviewWord")
+
+    updateReminders(input: RemindersInput!): Reminders!
+        @guard(with: ["sanctum"])
+        @field(resolver: "App\\GraphQL\\Mutations\\UpdateReminders")
+}
+
+type AuthPayload {
+    token: String!
+    user: User!
+}
+
+"Account of a person who uses this application."
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    "Translations go into this language; the interface speaks it too."
+    native_language: String!
+    "Codes of the languages being learnt, in the order they were picked."
+    studied_languages: [String!]! @method(name: "studiedLanguages")
+    reminders: Reminders! @method
+    created_at: DateTime!
+}
+
+type Dashboard {
+    language: String!
+    "Reviews due by the end of today."
+    due: Int!
+    "New cards still to be introduced today."
+    new: Int!
+    total: Int!
+    "Rough length of a session with all of them."
+    minutes: Int!
+    "Whether the user has answered any card today, in any language."
+    studied_today: Boolean!
+    "The next day after today with reviews waiting, and how many."
+    next_review_at: DateTime
+    next_review_count: Int!
+}
+
+type LanguageStats {
+    language: String!
+    total: Int!
+    due: Int!
+    learned: Int!
+    new: Int!
+}
+
+type ReminderForecast {
+    at: DateTime!
+    count: Int!
+    minutes: Int!
+    "The card a session at that moment would start with."
+    first_term: String
+}
+
+enum WordKind {
+    WORD @enum(value: "word")
+    PHRASE @enum(value: "phrase")
+}
+
+enum WordSource {
+    TEXT @enum(value: "text")
+    VOICE @enum(value: "voice")
+}
+
+enum WordState {
+    NEW @enum(value: "new")
+    LEARNING @enum(value: "learning")
+    REVIEW @enum(value: "review")
+    RELEARNING @enum(value: "relearning")
+}
+
+enum Rating {
+    AGAIN @enum(value: 1)
+    HARD @enum(value: 2)
+    GOOD @enum(value: 3)
+    EASY @enum(value: 4)
+}
+
+enum WordFilter {
+    ALL
+    "Reviews due by the end of today."
+    DUE
+    WORDS
+    PHRASES
+    LEARNED
+}
+
+enum WordSort {
+    "Most recently added first."
+    RECENT
+    ALPHABETICAL
+    "Soonest review first; new cards last."
+    DUE
+}
+
+type Word {
+    id: ID!
+    language: String!
+    translation_language: String!
+    term: String!
+    kind: WordKind!
+    "In the translation language, e.g. «прилагательное»."
+    part_of_speech: String
+    part_of_speech_short: String
+    transcriptions: [Transcription!]!
+    "The translations the user chose."
+    translations: [String!]!
+    "Other translations the dictionary offered, for the edit sheet."
+    suggested_translations: [String!]! @field(resolver: "App\\GraphQL\\Queries\\SuggestedTranslations")
+    "The user's own translation or example."
+    note: String
+    "A short definition in the word's own language."
+    meaning: String
+    examples: [Example!]!
+    forms: [WordForm!]!
+    synonyms: [String!]!
+    source: WordSource!
+    state: WordState!
+    "How well it is known: 0 new, 5 learnt."
+    level: Int! @method
+    due_at: DateTime
+    "Days until the next review once graduated."
+    interval: Float!
+    "Answers given."
+    reps: Int!
+    "Times it was forgotten."
+    lapses: Int!
+    last_reviewed_at: DateTime
+    created_at: DateTime!
+    "Where each answer would schedule it next, in seconds from now."
+    next_intervals: NextIntervals! @field(resolver: "App\\GraphQL\\Queries\\NextIntervals")
+}
+
+type Transcription {
+    "`uk` or `us` for English, null where a language has one pronunciation."
+    accent: String
+    ipa: String!
+}
+
+type Example {
+    text: String!
+    translation: String
+}
+
+type WordForm {
+    term: String!
+    translation: String
+    part_of_speech: String
+}
+
+type NextIntervals {
+    again: Int!
+    hard: Int!
+    good: Int!
+    easy: Int!
+}
+
+type LookupResult {
+    id: ID!
+    "Whether the text is a real word or phrase at all."
+    found: Boolean!
+    "Dictionary form in the language being learnt."
+    term: String
+    language: String!
+    translation_language: String!
+    kind: WordKind!
+    part_of_speech: String
+    part_of_speech_short: String
+    transcriptions: [Transcription!]!
+    "Candidate translations, most common first."
+    translations: [String!]!
+    meaning: String
+    examples: [Example!]!
+    forms: [WordForm!]!
+    synonyms: [String!]!
+    "Set when the user already has this term in the dictionary."
+    existing_word_id: ID
+}
+
+type Reminders {
+    enabled: Boolean!
+    times: [ReminderTime!]!
+    "ISO weekdays, 1 = Monday."
+    days: [Int!]!
+    "Stay quiet when nothing is due."
+    only_when_due: Boolean!
+    "Skip the remaining reminders of a day once the user has studied."
+    skip_if_studied: Boolean!
+}
+
+type ReminderTime {
+    "24-hour local time, e.g. 20:30."
+    time: String!
+    enabled: Boolean!
+}
+
+input RemindersInput {
+    enabled: Boolean!
+    times: [ReminderTimeInput!]! @rulesForArray(apply: ["max:6"])
+    days: [Int!]! @rulesForArray(apply: ["max:7"])
+    only_when_due: Boolean!
+    skip_if_studied: Boolean!
+}
+
+input ReminderTimeInput {
+    time: String! @rules(apply: ["required", "date_format:H:i"])
+    enabled: Boolean!
+}

@@ -1,0 +1,9 @@
+/.idea
+.DS_Store
+/.playwright-mcp
+
+# Android build artifacts (app-debug.apk and friends)
+*.apk
+*.aab
+*.apks
+*.idsig

@@ -1,0 +1,19 @@
+// "Slovnik" palette, from the design boards: a Material 3 teal scheme on a
+// pale mint page. The screens read the CSS variables in app.css; these only
+// colour what Quasar draws itself (dialogs, notifications, ripples).
+
+$primary   : #0E6B5E;
+$secondary : #3F4946;
+$accent    : #CCE8E1;
+
+$dark      : #171D1B;
+$dark-page : #0F1412;
+
+$positive  : #0E6B5E;
+$negative  : #BA1A1A;
+$info      : #3F4946;
+$warning   : #FFDCBD;
+
+$typography-font-family: 'Onest Variable', 'Onest', system-ui, sans-serif;
+
+$generic-border-radius: 20px;

@@ -1,0 +1,37 @@
+# Run after every image change:
+#   kubectl -n words create -f k8s/50-migrate-job.yaml
+#   kubectl -n words wait --for=condition=complete job -l job=migrate --timeout=300s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: migrate-
+  namespace: words
+  labels:
+    job: migrate
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        job: migrate
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr
+      containers:
+        - name: migrate
+          image: ghcr.io/litruk/words-api:latest
+          command: ["php", "artisan", "migrate", "--force"]
+          envFrom:
+            - configMapRef:
+                name: words-config
+            - secretRef:
+                name: words-secrets
+          env:
+            # Nothing serves traffic here, so skip warming the artisan caches.
+            - name: OPTIMIZE_ON_BOOT
+              value: "0"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false

@@ -1,0 +1,44 @@
+{
+  "name": "words-app",
+  "version": "0.0.1",
+  "description": "Words and phrases in every language you learn",
+  "productName": "Slovnik",
+  "author": "Grybovskyi Illia <elias@eltexsoft.com>",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "quasar dev",
+    "build": "quasar build",
+    "typecheck": "vue-tsc --noEmit",
+    "postinstall": "quasar prepare --silent"
+  },
+  "dependencies": {
+    "@capacitor-community/text-to-speech": "^8.0.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/app-launcher": "^8.0.1",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capgo/capacitor-speech-recognition": "^8.3.2",
+    "@fontsource-variable/onest": "^5.3.1",
+    "@fontsource/noto-sans": "^5.3.0",
+    "@quasar/extras": "^2.1.0",
+    "capacitor-native-settings": "^8.2.0",
+    "pinia": "^4.0.3",
+    "quasar": "^2.35.0",
+    "vue": "^3.5.43",
+    "vue-i18n": "^11.4.13",
+    "vue-router": "^5.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@quasar/app-vite": "^3.10.2",
+    "@types/node": "^22.19.11",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "typescript": "^6.0.0",
+    "vue-tsc": "^3.3.12"
+  },
+  "engines": {
+    "node": ">= 26 || ^24 || ^22.12"
+  }
+}

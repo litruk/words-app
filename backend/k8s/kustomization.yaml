@@ -1,0 +1,19 @@
+# Pin the release in one place:
+#   kustomize edit set image ghcr.io/litruk/words-api:<sha> ghcr.io/litruk/words-web:<sha>
+# or edit newTag below, then `kubectl apply -k k8s/`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: words
+
+resources:
+  - 00-namespace.yaml
+  - 10-config.yaml
+  - 20-postgres.yaml
+  - 40-app.yaml
+
+images:
+  - name: ghcr.io/litruk/words-api
+    newTag: latest
+  - name: ghcr.io/litruk/words-web
+    newTag: latest

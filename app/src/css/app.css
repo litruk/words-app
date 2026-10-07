@@ -1,0 +1,730 @@
+/* "Slovnik" design system.
+   Tokens from the design boards (a Material 3 style teal scheme) and the
+   shapes every screen is built from: buttons, outlined fields, chips, language
+   badges, switches and list rows. Pages use these classes instead of restating
+   the same padding and colours. */
+
+@import '@fontsource-variable/onest';
+/* Transcriptions: IPA symbols live in the latin-ext range. */
+@import '@fontsource/noto-sans/latin-400.css';
+@import '@fontsource/noto-sans/latin-ext-400.css';
+
+:root {
+  --w-bg: #f5fbf8;
+  --w-surface: #ffffff;
+  --w-ink: #171d1b;
+  --w-muted: #3f4946;
+  --w-disabled: #5b6562;
+  --w-outline: #6f7976;
+  --w-outline-soft: #bec9c5;
+  --w-divider: #dee4e1;
+  --w-container: #e9efec;
+  --w-container-low: #eff5f2;
+  --w-container-high: #e3eae7;
+
+  --w-primary: #0e6b5e;
+  --w-primary-hover: #0a5248;
+  --w-on-primary: #ffffff;
+  --w-primary-soft: #b8eee1;
+  --w-on-primary-soft: #00201b;
+  --w-tonal: #cce8e1;
+  --w-on-tonal: #051f1a;
+  --w-warm: #ffdcbd;
+  --w-on-warm: #2c1600;
+  --w-danger: #ba1a1a;
+
+  /* Answer grades, from the session summary board. */
+  --w-grade-again: #ba1a1a;
+  --w-grade-hard: #8a9692;
+  --w-grade-good: #0e6b5e;
+  --w-grade-easy: #7fd1bf;
+
+  --w-font: 'Onest Variable', 'Onest', system-ui, sans-serif;
+  --w-font-ipa: 'Noto Sans', sans-serif;
+
+  --w-safe-top: env(safe-area-inset-top, 0px);
+  --w-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body {
+  background: var(--w-bg);
+  color: var(--w-ink);
+  font-family: var(--w-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+a {
+  color: var(--w-primary);
+}
+
+a:hover {
+  color: var(--w-primary-hover);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.ipa {
+  font-family: var(--w-font-ipa);
+}
+
+.muted {
+  color: var(--w-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Screen frame ---------- */
+
+.w-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--w-safe-top);
+  background: var(--w-bg);
+}
+
+.w-topbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 64px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.w-topbar__title {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.w-topbar__spacer {
+  flex: 1;
+}
+
+.w-icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  border: none;
+  background: transparent;
+  color: var(--w-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.w-icon-btn:hover {
+  background: rgba(23, 29, 27, 0.06);
+  color: var(--w-ink);
+}
+
+.w-icon-btn--sm {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+}
+
+.w-icon-btn--accent {
+  color: var(--w-primary);
+}
+
+.w-title {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.w-lead {
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--w-muted);
+}
+
+.w-section-label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--w-primary);
+}
+
+.w-h2 {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+/* ---------- Buttons ---------- */
+
+.w-btn {
+  height: 52px;
+  padding: 0 24px;
+  border-radius: 26px;
+  border: none;
+  background: var(--w-primary);
+  color: var(--w-on-primary);
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.w-btn:hover {
+  background: var(--w-primary-hover);
+  color: var(--w-on-primary);
+}
+
+.w-btn:disabled {
+  background: var(--w-divider);
+  color: var(--w-disabled);
+  cursor: default;
+}
+
+.w-btn--md {
+  height: 48px;
+  border-radius: 24px;
+  font-size: 15px;
+}
+
+.w-btn--lg {
+  height: 56px;
+  border-radius: 28px;
+}
+
+.w-btn--tonal {
+  background: var(--w-tonal);
+  color: var(--w-on-tonal);
+}
+
+.w-btn--tonal:hover {
+  background: #bddbd3;
+  color: var(--w-on-tonal);
+}
+
+.w-btn--outline {
+  background: transparent;
+  color: var(--w-ink);
+  border: 1px solid var(--w-outline);
+}
+
+.w-btn--outline:hover {
+  background: rgba(23, 29, 27, 0.05);
+  color: var(--w-ink);
+}
+
+.w-btn--danger-text {
+  background: transparent;
+  color: var(--w-danger);
+}
+
+.w-btn--danger-text:hover {
+  background: rgba(186, 26, 26, 0.06);
+  color: var(--w-danger);
+}
+
+.w-link-btn {
+  min-height: 44px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--w-primary);
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.w-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  animation: w-spin 0.8s linear infinite;
+}
+
+@keyframes w-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Outlined field with a notched label ---------- */
+
+.w-field {
+  position: relative;
+}
+
+.w-field__label {
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  padding: 0 4px;
+  background: var(--w-bg);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--w-muted);
+  pointer-events: none;
+}
+
+.w-field__input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 56px;
+  padding: 0 16px;
+  border: 1px solid var(--w-outline);
+  border-radius: 6px;
+  background: transparent;
+  font-size: 16px;
+  color: var(--w-ink);
+  outline: none;
+}
+
+.w-field__input::placeholder {
+  color: var(--w-disabled);
+}
+
+.w-field__input:focus {
+  border: 2px solid var(--w-primary);
+  padding-left: 15px;
+}
+
+.w-field:focus-within .w-field__label {
+  color: var(--w-primary);
+  font-weight: 600;
+}
+
+.w-field--error .w-field__input,
+.w-field--error .w-field__input:focus {
+  border: 2px solid var(--w-danger);
+  padding-left: 15px;
+}
+
+.w-field--error .w-field__label,
+.w-field--error:focus-within .w-field__label {
+  color: var(--w-danger);
+}
+
+.w-field--trailing .w-field__input {
+  padding-right: 52px;
+}
+
+.w-field__trailing {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+}
+
+.w-field__help {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 16px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--w-muted);
+}
+
+.w-field__help--ok {
+  color: var(--w-primary);
+}
+
+.w-field__help--error {
+  color: var(--w-danger);
+}
+
+/* ---------- Chips ---------- */
+
+.w-chip {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--w-outline);
+  box-sizing: border-box;
+  background: transparent;
+  color: var(--w-ink);
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.w-chip:hover {
+  color: var(--w-ink);
+  background: rgba(23, 29, 27, 0.04);
+}
+
+.w-chip--selected,
+.w-chip--selected:hover {
+  border-color: transparent;
+  background: var(--w-tonal);
+  color: var(--w-on-tonal);
+  font-weight: 600;
+  padding-left: 10px;
+}
+
+.w-chip--strong.w-chip--selected,
+.w-chip--strong.w-chip--selected:hover {
+  background: var(--w-primary);
+  color: var(--w-on-primary);
+}
+
+.w-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Small outlined tag, e.g. "phrase". */
+.w-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--w-muted);
+  border: 1px solid var(--w-outline-soft);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* ---------- Language badge ---------- */
+
+.w-lang {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: var(--w-primary);
+  color: var(--w-on-primary);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.w-lang--sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  font-size: 11px;
+}
+
+.w-lang--neutral {
+  background: var(--w-divider);
+  color: var(--w-ink);
+}
+
+.w-lang--disabled {
+  background: var(--w-container);
+  color: var(--w-disabled);
+}
+
+/* ---------- Segmented control ---------- */
+
+.w-segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border: 1px solid var(--w-outline);
+  border-radius: 22px;
+  overflow: hidden;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.w-segmented__item {
+  border: none;
+  background: transparent;
+  color: var(--w-ink);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.w-segmented__item + .w-segmented__item {
+  border-left: 1px solid var(--w-outline);
+}
+
+.w-segmented__item[aria-pressed='true'] {
+  background: var(--w-tonal);
+  color: var(--w-on-tonal);
+  font-weight: 600;
+}
+
+/* ---------- Switch (Material 3) ---------- */
+
+.w-switch {
+  width: 52px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.w-switch__track {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 32px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 2px solid var(--w-outline);
+  background: var(--w-divider);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.w-switch__thumb {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--w-outline);
+  color: var(--w-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
+}
+
+.w-switch[aria-checked='true'] .w-switch__track {
+  background: var(--w-primary);
+  border-color: var(--w-primary);
+}
+
+.w-switch[aria-checked='true'] .w-switch__thumb {
+  top: 2px;
+  left: 22px;
+  width: 24px;
+  height: 24px;
+  background: var(--w-on-primary);
+}
+
+/* ---------- Lists and cards ---------- */
+
+.w-card {
+  background: var(--w-container);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.w-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+}
+
+.w-divider-list > * + * {
+  border-top: 1px solid var(--w-divider);
+}
+
+/* Selectable row (radio / checkbox), as on the language boards. */
+.w-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 16px 0 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.w-option--selected {
+  background: var(--w-tonal);
+}
+
+.w-option--disabled {
+  cursor: default;
+}
+
+.w-option input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--w-primary);
+  flex-shrink: 0;
+}
+
+.w-option__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.w-option__name {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.w-option--selected .w-option__name {
+  font-weight: 600;
+}
+
+.w-option__hint {
+  font-size: 13px;
+  color: var(--w-muted);
+}
+
+.w-option--disabled .w-option__name,
+.w-option--disabled .w-option__hint {
+  color: var(--w-disabled);
+}
+
+/* ---------- Bottom sheets (QDialog position="bottom") ---------- */
+
+.w-sheet {
+  width: 100%;
+  max-width: 560px;
+  background: var(--w-container-low);
+  border-radius: 28px 28px 0 0;
+  padding: 12px 16px calc(28px + var(--w-safe-bottom));
+  box-sizing: border-box;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.12);
+}
+
+.w-sheet__handle {
+  display: block;
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: #9aa5a1;
+  margin: 0 auto 12px;
+}
+
+.w-sheet__title {
+  padding: 4px 8px 12px;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+/* Notched labels sit on the sheet's own colour. */
+.w-sheet .w-field__label {
+  background: var(--w-container-low);
+}
+
+/* ---------- Notices ---------- */
+
+.w-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #ffdad6;
+  color: #410002;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.w-banner > svg {
+  flex-shrink: 0;
+}
+
+.w-banner--neutral {
+  background: var(--w-container);
+  color: var(--w-ink);
+}
+
+.w-banner__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.w-banner__title {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+/* Quasar's Notify, restyled as a Material 3 snackbar. */
+.q-notification.w-snackbar {
+  background: #2c3230;
+  color: #eff1ef;
+  border-radius: 6px;
+  font-family: var(--w-font);
+}
+
+/* ---------- Loading placeholders ---------- */
+
+.skeleton {
+  display: block;
+  border-radius: 7px;
+  background: var(--w-container-high);
+  animation: w-skeleton 1.4s ease-in-out infinite;
+}
+
+.skeleton--soft {
+  background: var(--w-container);
+}
+
+.due--skeleton .skeleton {
+  background: var(--w-divider);
+}
+
+@keyframes w-skeleton {
+  50% {
+    opacity: 0.55;
+  }
+}

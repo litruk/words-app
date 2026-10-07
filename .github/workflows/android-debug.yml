@@ -1,0 +1,125 @@
+name: Android debug build
+
+# Builds the Quasar/Capacitor app as a debug APK (signed with the standard
+# debug keystore, so it installs without any release signing setup) and hands
+# it to Firebase App Distribution. The APK is also kept as a workflow artifact,
+# so builds stay downloadable even if the Firebase step is not configured yet.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: Release notes shown to testers
+        required: false
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      # Docs never change what ends up in the APK.
+      - '!app/**.md'
+      - '.github/workflows/android-debug.yml'
+
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # FIREBASE_SERVICE_ACCOUNT / FIREBASE_ANDROID_APP_ID are environment
+    # secrets (Settings -> Environments -> production), and a job only sees
+    # those when it declares the environment.
+    environment: production
+
+    defaults:
+      run:
+        working-directory: app
+
+    env:
+      # Repo-relative; `run` steps below resolve it against $GITHUB_WORKSPACE.
+      APK_PATH: app/src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk
+      # `secrets` cannot be read from a step-level `if`, so fold it into env.
+      HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' && secrets.FIREBASE_ANDROID_APP_ID != '' }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      # The runner image ships recent platforms; this is a no-op when
+      # android-36 (compileSdkVersion in variables.gradle) is already there.
+      - name: Ensure the compile SDK is installed
+        run: yes | sdkmanager "platforms;android-36" >/dev/null || true
+
+      # .env is gitignored, so the endpoint is injected here. QCLI_ is the
+      # prefix Quasar exposes to client code. Override it with a repository
+      # variable named QCLI_API_URL to build against another backend.
+      - name: Point the build at the API
+        run: echo "QCLI_API_URL=${{ vars.QCLI_API_URL || 'https://api-words.litruk.dev/graphql' }}" > .env
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the debug APK
+        run: npx quasar build -m capacitor -T android --debug
+        env:
+          # Quasar calls gradlew itself, so the version is passed as a gradle
+          # project property through the environment rather than on the command
+          # line. See versionCode in src-capacitor/android/app/build.gradle.
+          ORG_GRADLE_PROJECT_appVersionCode: ${{ github.run_number }}
+
+      - name: Upload the APK as an artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-debug-${{ github.sha }}
+          path: ${{ env.APK_PATH }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Distribute to Firebase testers
+        if: env.HAS_FIREBASE == 'true'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          # Optional. Group alias (not display name) from App Distribution ->
+          # Testers & groups, and/or a comma-separated list of tester emails.
+          # Left empty the release is still uploaded, just not shared with anyone.
+          TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS }}
+          TESTERS: ${{ vars.FIREBASE_TESTERS }}
+          RELEASE_NOTES: ${{ inputs.release_notes || github.event.head_commit.message || github.sha }}
+        run: |
+          set -euo pipefail
+          credentials="$RUNNER_TEMP/firebase-service-account.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$credentials"
+          trap 'rm -f "$credentials"' EXIT
+
+          args=(--app "$FIREBASE_APP_ID" --release-notes "$RELEASE_NOTES")
+          if [ -n "${TESTER_GROUPS:-}" ]; then
+              args+=(--groups "$TESTER_GROUPS")
+          fi
+          if [ -n "${TESTERS:-}" ]; then
+              args+=(--testers "$TESTERS")
+          fi
+
+          GOOGLE_APPLICATION_CREDENTIALS="$credentials" \
+          npx --yes firebase-tools@15 appdistribution:distribute \
+              "$GITHUB_WORKSPACE/$APK_PATH" "${args[@]}"
+
+      - name: Explain the skipped distribution
+        if: env.HAS_FIREBASE != 'true'
+        run: |
+          echo "::notice::FIREBASE_SERVICE_ACCOUNT / FIREBASE_ANDROID_APP_ID are not set - the APK is available as a workflow artifact only."
